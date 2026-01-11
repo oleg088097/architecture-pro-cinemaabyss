@@ -2,7 +2,7 @@
 
 ## Задание 1
 
-![svg](./schemas/C4_container.svg)]
+![svg](./schemas/C4_container.svg)
 
 
 ## Задание 2
