@@ -1,0 +1,104 @@
+@startuml
+!NEW_C4_STYLE=1
+
+!include  https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+SHOW_PERSON_OUTLINE()
+title CinemaAbyss Container Diagram
+
+AddRelTag("async", $textColor="$ARROW_FONT_COLOR", $lineColor="$ARROW_COLOR", $lineStyle = DashedLine())
+
+Person(user, "User", "A user of the CinemaAbyss system")
+
+System_Ext(recommendationsSystem, "Recommendations System", "External Recommendations System")
+System_Ext(paymentSystem, "Payment System", "External Payment System")
+
+System_Boundary(cinemaAbyssSystem, "CinemaAbyss System") {
+    Container(proxy, "Customer Gateway", , "End user request gateway with auth check")
+
+    Container_Boundary(bff_containers, "BFF") {
+        Container(desktopBff, "Desktop BFF", , "BFF for desktop clients")
+        Container(mobileBff, "Mobile BFF", , "BFF for mobile Clients")
+        Container(tvBff, "Smart TV Client BFF", , "BFF for Smart TV Clients")
+    }
+
+    Container_Boundary(auth_subdomain, "Auth Subdomain") {
+        Container(authService, "Auth Service", , "User profile management and authentication")
+        ContainerDb(authServiceDb, "Auth Database",  "SQL Database", "Stores user credentials and profile", "")
+    }
+    Container_Boundary(user_movie_subdomain, "User Movie Subdomain") {
+        Container(userMovieListService, "User Movie List Service", , "Stores user lists, users viewed list")
+        ContainerDb(userMovieListDb, "User Movie List Database",  "SQL Database", "", "")
+
+        Container(userMovieRatingService, "User Movie Rating Service", , "Stores user movie ratings")
+        ContainerDb(userMovieRatingDb, "User Movie Rating Database",  "SQL Database", "", "")
+    }
+
+    Container_Boundary(payment_subdomain, "Payment Subdomain") {
+        Container(userPaymentService, "User Payment Service", ,"Stores user payment methods", "")
+        Container(paymentService, "Payment Service", ,"Executes payment operation and keeps records", "")
+        Container(paymentAdapterService, "Payment Adapter", ,"External Payment Anti-Corruption Layer", "")
+        ContainerDb(paymentDb, "Payment Database",  "SQL Database", "Stores payment records", "")
+    }
+
+    Container_Boundary(subscription_subdomain, "Subscription Subdomain") {
+        Container(subscriptionService, "Subscription Service", ,"Stores user subscriptions and subscription plans", "")
+        ContainerDb(subscriptionDb, "Subscription Database", "SQL Database", "", "")
+    }
+
+    Container_Boundary(movie_catalog_subdomain, "Movie Catalog Subdomain") {
+        Container(movieCatalogService, "Movie Catalog Service", ,"Stores movie catalog and metadata", "")
+        ContainerDb(movieCatalogDb, "Movie Catalog Database", "SQL Database", "", "")
+    }
+
+    Container_Boundary(recommendations_subdomain, "Recommendations Subdomain") {
+        Container(recommendationsService, "Recommendations Service", ,"Requests and stores recommendations for users", "")
+        Container(recommendationsAdapterService, "Recommendations Adapter", ,"External Recommendations Anti-Corruption Layer", "")
+        ContainerDb(recommendationsCacheDb, "Recommendations Cache Database", "SQL Database", "", "")
+    }
+
+}
+
+' Device access Subdomain
+Rel(paymentService, paymentDb, "", )
+Rel(paymentService, userPaymentService, "Requests payment method")
+Rel(paymentService, paymentAdapterService, "")
+Rel(paymentAdapterService, paymentSystem, "")
+
+' Auth Subdomain
+Rel(authService, authServiceDb, "", )
+
+' Subscription Subdomain
+Rel(subscriptionService, subscriptionDb, "")
+Rel_D(subscriptionService, paymentService, "Apply payment to purchase subscription", "kafka", $tags="async")
+
+' User Movie Subdomain
+Rel(userMovieListService, userMovieListDb, "")
+Rel(userMovieRatingService, userMovieRatingDb, "")
+Rel_D(userMovieListService, recommendationsService, "Request recalculation", "kafka", $tags="async")
+Rel_D(userMovieRatingService, recommendationsService, "Request recalculation", "kafka", $tags="async")
+
+' Movie Subdomain
+Rel(movieCatalogService, movieCatalogDb, "")
+
+' Recommendations Subdomain
+Rel(recommendationsService, userMovieListService, "Get users viewed/favorite movies")
+Rel(recommendationsService, userMovieRatingService, "Get users movies rating")
+Rel(recommendationsService, recommendationsCacheDb, "")
+Rel(recommendationsService, recommendationsAdapterService, "Request recommendations for users", $tags="async")
+Rel(recommendationsAdapterService, recommendationsSystem, "Request recommendations in external system format", "RMQ", $tags="async")
+
+' Customer use cases
+Rel(user, proxy, "Sends requests via public API", "HTTPS")
+Rel(proxy, authService, "Authenticates user and get access token")
+Rel(proxy, bff_containers, "Execute user requests")
+
+Rel_L(bff_containers, authService, "")
+Rel_L(bff_containers, userPaymentService, "")
+Rel_D(bff_containers, movieCatalogService, "")
+Rel_D(bff_containers, userMovieListService, "")
+Rel_D(bff_containers, userMovieRatingService, "")
+Rel_D(bff_containers, subscriptionService, "")
+Rel_D(bff_containers, recommendationsService, "")
+
+SHOW_LEGEND()
+@enduml
