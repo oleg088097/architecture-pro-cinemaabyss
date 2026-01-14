@@ -48,6 +48,7 @@ System_Boundary(cinemaAbyssSystem, "CinemaAbyss System") {
     Container_Boundary(movie_catalog_subdomain, "Movie Catalog Subdomain") {
         Container(movieCatalogService, "Movie Catalog Service", ,"Stores movie catalog and metadata", "")
         ContainerDb(movieCatalogDb, "Movie Catalog Database", "SQL Database", "", "")
+        ContainerDb(movieCatalogObjectStorage, "Movie Catalog ObjectStorage", "S3", "", "")
     }
 
     Container_Boundary(recommendations_subdomain, "Recommendations Subdomain") {
@@ -79,6 +80,7 @@ Rel_D(userMovieRatingService, recommendationsService, "Request recalculation", "
 
 ' Movie Subdomain
 Rel(movieCatalogService, movieCatalogDb, "")
+Rel(movieCatalogService, movieCatalogObjectStorage, "")
 
 ' Recommendations Subdomain
 Rel(recommendationsService, userMovieListService, "Get users viewed/favorite movies")
