@@ -19,8 +19,8 @@ GRADUAL_MIGRATION = os.getenv("GRADUAL_MIGRATION", "false")
 MOVIES_MIGRATION_PERCENT = int(os.getenv("MOVIES_MIGRATION_PERCENT", "0"))
 app = FastAPI()
 
-@app.get("/api/movies")
-@app.post("/api/movies")
+@app.get("/api/movies{rest_of_path:path}")
+@app.post("/api/movies{rest_of_path:path}")
 async def movies_proxy(request: Request, q: str | None = None):
     body = await request.body()
     if GRADUAL_MIGRATION == 'true' and random.randrange(1, 100) < MOVIES_MIGRATION_PERCENT:
@@ -43,8 +43,8 @@ async def movies_proxy(request: Request, q: str | None = None):
     )
 
 
-@app.get("/api/users")
-@app.post("/api/users")
+@app.get("/api/users/{rest_of_path:path}")
+@app.post("/api/users/{rest_of_path:path}")
 async def users_proxy(request: Request, q: str | None = None):
     body = await request.body()
     r = requests.request(request.method,
