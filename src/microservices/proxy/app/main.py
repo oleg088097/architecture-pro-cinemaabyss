@@ -14,17 +14,24 @@ MOVIES_MIGRATION_PERCENT = int(os.getenv("MOVIES_MIGRATION_PERCENT", "0"))
 app = FastAPI()
 
 @app.get("/api/movies")
-async def send_config():
+@app.post("/api/movies")
+async def movies_proxy(request: Request, q: str | None = None):
     if GRADUAL_MIGRATION == 'true' and random.randrange(1, 100) < MOVIES_MIGRATION_PERCENT:
-        r = requests.get(f'{MOVIES_SERVICE_URL}/api/movies')
+        r = requests.request(request.method, f'{MOVIES_SERVICE_URL}{request.url.path}{q}', data=await request.json())
     else:
-        r = requests.get(f'{MONOLITH_URL}/api/movies')
+        r = requests.request(request.method, f'{MONOLITH_URL}{request.url.path}{q}', data=await request.json())
 
-    return r.json()
+    return Response(
+        content=r.content,
+        status_code=r.status_code,
+        headers=dict(r.headers) # Convert requests headers (CaseInsensitiveDict) to a standard dict
+    )
+
 
 @app.get("/api/users")
-async def send_config():
-    r = requests.get(f'{MONOLITH_URL}/api/users')
+@app.post("/api/users")
+async def users_proxy(request: Request, q: str | None = None):
+    r = requests.request(request.method, f'{MONOLITH_URL}{request.url.path}{q}', data=await request.json())
     return Response(
         content=r.content,
         status_code=r.status_code,
